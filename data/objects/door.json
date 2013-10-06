@@ -1,0 +1,40 @@
+{
+    "fixtures": [
+        {
+            "size": [
+                18, 
+                2
+            ], 
+            "texture": "textures/platform", 
+            "type": "box",
+            "sensor": false,
+            "auto-create": false
+        },
+        {
+            "size": [
+                18, 
+                10
+            ], 
+            "texture": "",
+            "type": "box",
+            "sensor": true,
+             "touching": {
+                "action": "door-open",
+                "delay": 1,
+                "options": {}
+            },
+             "end-contact": {
+                "action": "door-close",
+                "delay": 1,
+                "options": {}
+            }
+        }
+    ], 
+    "name": "door", 
+    "type": "default",
+    "class": "rocket.object.Door",
+    "speed": 0.08,
+    "state": 1.0,
+    "direction": -1,
+    "door_index": 0
+}

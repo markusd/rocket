@@ -1,0 +1,24 @@
+{
+    "fixtures": [
+        {
+            "size": [
+                20, 
+                4
+            ], 
+            "texture": "textures/platform", 
+            "type": "box",
+            "sensor": false,
+            "touching": {
+                "action": "refill", 
+                "delay": 1, 
+                "options": {
+                    "rate": 5,
+                    "capacity": 120
+                }
+            }
+        }
+    ], 
+    "name": "platform", 
+    "type": "static",
+    "class": "rocket.object.Object"
+}
