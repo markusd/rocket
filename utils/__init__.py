@@ -103,6 +103,7 @@ def nested_merge(a, b):
                     nested_merge(a[i], b[i])
                 elif isinstance(a[i], list) and isinstance(b[i], list):
                     nested_merge(a[i], b[i])
+        return a
     else:
         raise ValueError()
 
