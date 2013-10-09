@@ -1,0 +1,22 @@
+{
+    "fixtures": [
+        {
+            "size": [
+                2, 
+                2
+            ], 
+            "texture": "textures/key", 
+            "type": "box",
+            "sensor": false,
+            "touching": {
+                "action": "pick-up",
+                "options": {
+                    "name": "key"
+                }
+            }
+        }
+    ], 
+    "name": "platform", 
+    "type": "dynamic",
+    "class": "rocket.object.Object"
+}

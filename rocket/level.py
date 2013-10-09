@@ -41,8 +41,12 @@ class LevelBase(b2ContactListener):
             
         self.timers = list(filter(lambda t: t.started(), self.timers))
         
-        for k, v in self.actions.items():
+        actions = dict(self.actions)
+        for k, v in actions.items():
             v(dt)
+        
+        #self.actions.clear()    
+            
         for o in self.objects:
             o.update(dt)
         
@@ -82,6 +86,15 @@ class LevelBase(b2ContactListener):
         for f in level["edgeFixtures"]:
             self.edgeFixtures.CreateEdgeChain(f)
             
+            
+    def checkRequirements(self, player, requirements):
+        if requirements is None:
+            return True
+        if len(requirements.get("possessions", [])) == 0:
+            return True
+        return set(player.possessions).issuperset(set(requirements["possessions"]))
+            
+            
     def PreSolve(self, contact, old_manifold):
         pass
     
@@ -110,10 +123,18 @@ class LevelBase(b2ContactListener):
                 player.fuel = min(100, player.fuel + amount)
                 fixU["touching"]["options"]["capacity"] = fixU["touching"]["options"]["capacity"] - amount
             now = Clock.sysTime()
-            self.actions[(player, fix)] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > fixU["touching"]["delay"] else None
+            self.actions[(player, fix)] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > fixU["touching"]["delay"] and self.checkRequirements(player, fixU["touching"].get("requirements", None)) else None
         elif fixU["touching"]["action"] == "door-open":
             now = Clock.sysTime()
-            self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > fixU["touching"]["delay"] else None
+            self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > fixU["touching"]["delay"] and self.checkRequirements(player, fixU["touching"].get("requirements", None)) else None
+        elif fixU["touching"]["action"] == "pick-up":
+            def destroy_obj(body, obj):
+                self.world.DestroyBody(body)
+                self.objects.remove(obj)
+            if self.checkRequirements(player, fixU["touching"].get("requirements", None)):
+                player.possessions.append(fixU["touching"]["options"]["name"])
+                contact.enabled = False
+                self.actions[(player, fix)] = lambda dt: destroy_obj(fix.body, obj) 
     
     def EndContact(self, contact):
         if self.player is None:
@@ -139,7 +160,7 @@ class LevelBase(b2ContactListener):
             return
         
         if fixU["end-contact"]["action"] == "door-close":
-            action = lambda: obj.close()
+            action = lambda: obj.close() if self.checkRequirements(player, fixU["touching"].get("requirements", None)) else None
             delay = fixU["end-contact"].get("delay", 0)
             if delay > 0:
                 self.timers.append(Timer(interval=delay, start=True, func=action, repeat=False))

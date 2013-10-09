@@ -73,6 +73,8 @@ class Main(QGLWidget, b2ContactListener):
             position=(0, 0), extension={"fixtures":[{"touching":{"options":{"rate": 10}}, "size": [25, 4]}]}))
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/door.json",
             position=(-14.5, 25)))
+        self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/key.json",
+            position=(18, 10)))
         
     def resizeGL(self, w, h): 
         glViewport(0, 0, w, h)

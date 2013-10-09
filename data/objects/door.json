@@ -20,6 +20,9 @@
             "sensor": true,
              "touching": {
                 "action": "door-open",
+                "requirements": {
+                    "possessions": ["key"]
+                },
                 "delay": 1,
                 "options": {}
             },
@@ -31,7 +34,7 @@
         }
     ], 
     "name": "door", 
-    "type": "default",
+    "type": "static",
     "class": "rocket.object.Door",
     "speed": 0.08,
     "state": 1.0,

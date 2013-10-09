@@ -17,6 +17,7 @@ class Player():
         self.world = world
         
         self.fuel = 50.0
+        self.possessions = []
         
         w = 1.0
         h = 2.5
@@ -68,8 +69,6 @@ class Player():
             p = self.body.GetWorldPoint(localPoint=(0.0, 0.0))
             self.body.ApplyForce(f, p, True)
             self.fuel = max(0.0, self.fuel)
-
-
         
     def render(self):
         glColor3f(1.0, 1.0, 1.0)
@@ -86,13 +85,6 @@ class Player():
         glEnd()
         glPopMatrix()
         glDisable(GL_TEXTURE_2D)
-        
-        
-    def __unicode__(self):
-        return "Player<>"
-    
-    def __str__(self):
-        return "Player<>"
     
 
             

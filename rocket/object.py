@@ -44,7 +44,7 @@ class Object():
         if self.type == "static":
             self.body = self.world.CreateStaticBody(position=position, userData=self)
         else:
-            raise NotImplementedError()
+            self.body = self.world.CreateDynamicBody(position=position, userData=self)
         
         for f in obj["fixtures"]:
             if f["type"] == "box":
@@ -70,22 +70,26 @@ class Object():
                 texture.bind()
             size = f.userData["size"]
             glBegin(GL_QUADS)
-            #glTexCoord2f(0, 0) ; glVertex2f(-size[0]*0.5 + self.body.transform.position.x, -size[1]*0.5 + self.body.transform.position.y)
-            #glTexCoord2f(1, 0) ; glVertex2f( size[0]*0.5 + self.body.transform.position.x, -size[1]*0.5 + self.body.transform.position.y)
-            #glTexCoord2f(1, 1) ; glVertex2f( size[0]*0.5 + self.body.transform.position.x,  size[1]*0.5 + self.body.transform.position.y)
-            #glTexCoord2f(0, 1) ; glVertex2f(-size[0]*0.5 + self.body.transform.position.x,  size[1]*0.5 + self.body.transform.position.y)
-            
-            glTexCoord2f(0, 0) ; glVertex2f(f.shape.vertices[0][0] + self.body.transform.position.x, f.shape.vertices[0][1] + self.body.transform.position.y)
-            glTexCoord2f(1, 0) ; glVertex2f(f.shape.vertices[1][0] + self.body.transform.position.x, f.shape.vertices[1][1] + self.body.transform.position.y)
-            glTexCoord2f(1, 1) ; glVertex2f(f.shape.vertices[2][0] + self.body.transform.position.x, f.shape.vertices[2][1] + self.body.transform.position.y)
-            glTexCoord2f(0, 1) ; glVertex2f(f.shape.vertices[3][0] + self.body.transform.position.x, f.shape.vertices[3][1] + self.body.transform.position.y)
+            px = self.body.transform.position.x if self.type == "static" else 0
+            py = self.body.transform.position.y if self.type == "static" else 0
+            glTexCoord2f(0, 0) ; glVertex2f(f.shape.vertices[0][0] + px, f.shape.vertices[0][1] + py)
+            glTexCoord2f(1, 0) ; glVertex2f(f.shape.vertices[1][0] + px, f.shape.vertices[1][1] + py)
+            glTexCoord2f(1, 1) ; glVertex2f(f.shape.vertices[2][0] + px, f.shape.vertices[2][1] + py)
+            glTexCoord2f(0, 1) ; glVertex2f(f.shape.vertices[3][0] + px, f.shape.vertices[3][1] + py)
             glEnd()
         glEndList()
         
     def render(self):
         if self.list == -1:
             self.buildList()
-        glCallList(self.list)
+        if self.type == "dynamic":
+            glPushMatrix()
+            glTranslatef(self.body.transform.position.x, self.body.transform.position.y, 0.0)
+            glRotatef(self.body.transform.angle * 180.0/3.14, 0.0, 0.0, 1.0)
+            glCallList(self.list)
+            glPopMatrix()
+        else:
+            glCallList(self.list)
         
     def update(self, dt):
         pass
@@ -108,10 +112,7 @@ class Door(Object):
         self.direction = obj["direction"]
         self.door_index = obj["door_index"]
         
-        if self.type == "default":
-            self.body = self.world.CreateStaticBody(position=position, userData=self)
-        else:
-            raise NotImplementedError()
+        self.body = self.world.CreateStaticBody(position=position, userData=self)
         
         for f in obj["fixtures"]:
             if f["type"] == "box":
