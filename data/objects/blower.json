@@ -1,0 +1,61 @@
+{
+    "fixtures": [
+        {
+            "size": [
+                2, 
+                16
+            ], 
+            "texture": "textures/platform", 
+            "type": "box",
+            "sensor": false
+        },
+        {
+            "size": [
+                25, 
+                16
+            ], 
+            "texture": "", 
+            "type": "box",
+            "sensor": true,
+            "touching": {
+                "action": "apply-force",
+                "options": {
+                    "force": [ -100, 0 ]
+                }
+            }
+        },
+        {
+            "size": [
+                175, 
+                16
+            ], 
+            "texture": "", 
+            "type": "box",
+            "sensor": true,
+            "touching": {
+                "action": "apply-force",
+                "options": {
+                    "force": [ -50, 0 ]
+                }
+            }
+        },
+        {
+            "size": [
+                300, 
+                16
+            ], 
+            "texture": "", 
+            "type": "box",
+            "sensor": true,
+            "touching": {
+                "action": "apply-force",
+                "options": {
+                    "force": [ -35, 0 ]
+                }
+            }
+        }
+    ], 
+    "name": "platform", 
+    "type": "static",
+    "class": "rocket.object.Object"
+}

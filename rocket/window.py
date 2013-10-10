@@ -75,6 +75,8 @@ class Main(QGLWidget, b2ContactListener):
             position=(-14.5, 25)))
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/key.json",
             position=(18, 10)))
+        self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/blower.json",
+            position=(140,60)))
         
     def resizeGL(self, w, h): 
         glViewport(0, 0, w, h)
@@ -167,7 +169,7 @@ class Main(QGLWidget, b2ContactListener):
             
         self.cloudManager.render(dt, self.offset, self.player.body.linearVelocity)
         self.world.renderer.StartDraw(center=self.offset, zoom=self.zoom, screen=(self.width(), self.height()))
-        #self.world.DrawDebugData()
+        self.world.DrawDebugData()
         self.world.renderer.EndDraw()
         
         

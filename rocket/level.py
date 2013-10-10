@@ -99,6 +99,7 @@ class LevelBase(b2ContactListener):
         pass
     
     def BeginContact(self, contact):
+        #TODO actions can apply to other objects, not only players
         if self.player is None:
             return
 
@@ -134,7 +135,13 @@ class LevelBase(b2ContactListener):
             if self.checkRequirements(player, fixU["touching"].get("requirements", None)):
                 player.possessions.append(fixU["touching"]["options"]["name"])
                 contact.enabled = False
-                self.actions[(player, fix)] = lambda dt: destroy_obj(fix.body, obj) 
+                self.actions[(player, fix)] = lambda dt: destroy_obj(fix.body, obj)
+        elif fixU["touching"]["action"] == "apply-force":
+            def apply_force(player, force, point):
+                f = player.body.GetWorldVector(localVector=force)
+                p = player.body.GetWorldPoint(localPoint=point)
+                player.body.ApplyForce(force, p, True)
+            self.actions[(player, fix)] = lambda dt: apply_force(player, fixU["touching"]["options"]["force"], (0, 0))
     
     def EndContact(self, contact):
         if self.player is None:
