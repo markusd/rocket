@@ -54,11 +54,10 @@ class Object():
             else:
                 raise NotImplementedError()
             
-    def buildList(self):
-        if self.list > -1:
-            glDeleteLists(self.list, 1)
-        self.list = glGenLists(1)
-        glNewList(self.list, GL_COMPILE)
+    def buildList(self, render=False):
+        if self.list == -1:
+            self.list = glGenLists(1)
+        glNewList(self.list, GL_COMPILE_AND_EXECUTE if render else GL_COMPILE)
        
         for f in self.body:
             if f.sensor:
@@ -81,15 +80,16 @@ class Object():
         
     def render(self):
         if self.list == -1:
-            self.buildList()
+            self.buildList(render=self.type == "static")
+        elif self.type == "static":
+            glCallList(self.list)
+
         if self.type == "dynamic":
             glPushMatrix()
             glTranslatef(self.body.transform.position.x, self.body.transform.position.y, 0.0)
             glRotatef(self.body.transform.angle * 180.0/3.14, 0.0, 0.0, 1.0)
             glCallList(self.list)
             glPopMatrix()
-        else:
-            glCallList(self.list)
         
     def update(self, dt):
         pass

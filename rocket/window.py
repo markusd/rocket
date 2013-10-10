@@ -167,7 +167,7 @@ class Main(QGLWidget, b2ContactListener):
             
         self.cloudManager.render(dt, self.offset, self.player.body.linearVelocity)
         self.world.renderer.StartDraw(center=self.offset, zoom=self.zoom, screen=(self.width(), self.height()))
-        self.world.DrawDebugData()
+        #self.world.DrawDebugData()
         self.world.renderer.EndDraw()
         
         

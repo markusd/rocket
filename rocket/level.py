@@ -21,11 +21,10 @@ class LevelBase(b2ContactListener):
         self.actions = {}
         self.timers = []
         
-    def buildList(self):
-        if self.list > -1:
-            glDeleteLists(self.list, 1)
-        self.list = glGenLists(1)
-        glNewList(self.list, GL_COMPILE)
+    def buildList(self, render=False):
+        if self.list == -1:
+            self.list = glGenLists(1)
+        glNewList(self.list, GL_COMPILE_AND_EXECUTE if render else GL_COMPILE)
         
         glBegin(GL_LINES)
         for f in self.edgeFixtures:
@@ -42,6 +41,7 @@ class LevelBase(b2ContactListener):
         self.timers = list(filter(lambda t: t.started(), self.timers))
         
         actions = dict(self.actions)
+        print(len(actions))
         for k, v in actions.items():
             v(dt)
         
@@ -52,8 +52,9 @@ class LevelBase(b2ContactListener):
         
     def render(self):
         if self.list == -1:
-            self.buildList()
-        glCallList(self.list)
+            self.buildList(render=True)
+        else:
+            glCallList(self.list)
         
         for obj in self.objects:
             obj.render()
