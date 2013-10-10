@@ -102,6 +102,7 @@ class Door(Object):
         self.doorFixture = None
         self.opening = False
         self.closing = False
+        self.destroyingFixture = False
         
     def _deserialize(self, obj, position=(0, 0), **kwargs):
         obj = nested_merge(kwargs.get("extension", dict()), obj)
@@ -154,7 +155,9 @@ class Door(Object):
             return
 
         if self.doorFixture:
+            self.destroyingFixture = True
             self.body.DestroyFixture(self.doorFixture)
+            self.destroyingFixture = False
             self.doorFixture = None
         
         size = (self.size[0] * self._state, self.size[1])

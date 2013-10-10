@@ -146,7 +146,7 @@ class Main(QGLWidget, b2ContactListener):
             
         self.level.update(dt)
         self.player.update(dt)
-        
+            
         self.world.Step(dt, 8, 3)
         self.world.ClearForces()
         

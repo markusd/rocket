@@ -41,12 +41,11 @@ class LevelBase(b2ContactListener):
         self.timers = list(filter(lambda t: t.started(), self.timers))
         
         actions = dict(self.actions)
-        print(len(actions))
         for k, v in actions.items():
             v(dt)
         
         #self.actions.clear()    
-            
+
         for o in self.objects:
             o.update(dt)
         
@@ -140,7 +139,7 @@ class LevelBase(b2ContactListener):
     def EndContact(self, contact):
         if self.player is None:
             return
-        
+
         if contact.fixtureA.body == self.player.body:
             player = contact.fixtureA.body.userData
             fix = contact.fixtureB
@@ -150,13 +149,21 @@ class LevelBase(b2ContactListener):
         else:
             return
         
-        obj = fix.body.userData
-        fixU = fix.userData
-
         k = (player, fix)
         if k in self.actions:
             del self.actions[k]
-            
+        
+        obj = fix.body.userData
+        
+        # Stupid workaround for nasty pybox2d bug:
+        # Getting the user data of a fixture that is currently
+        # begin deleted results in the process crashing without
+        # any error due to heap corruption
+        if getattr(obj, "destroyingFixture", False):
+            return
+        
+        fixU = fix.userData
+        
         if fixU is None or fixU.get("end-contact", None) is None:
             return
         
