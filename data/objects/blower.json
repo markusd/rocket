@@ -17,12 +17,14 @@
             "texture": "", 
             "type": "box",
             "sensor": true,
-            "touching": {
-                "action": "apply-force",
-                "options": {
-                    "force": [ -100, 0 ]
+            "touching": [
+                {
+                    "action": "apply-force",
+                    "options": {
+                        "force": [ -100, 0 ]
+                    }
                 }
-            }
+            ]
         },
         {
             "size": [
@@ -32,12 +34,14 @@
             "texture": "", 
             "type": "box",
             "sensor": true,
-            "touching": {
-                "action": "apply-force",
-                "options": {
-                    "force": [ -50, 0 ]
+            "touching": [
+                {
+                    "action": "apply-force",
+                    "options": {
+                        "force": [ -50, 0 ]
+                    }
                 }
-            }
+            ]
         },
         {
             "size": [
@@ -47,12 +51,14 @@
             "texture": "", 
             "type": "box",
             "sensor": true,
-            "touching": {
-                "action": "apply-force",
-                "options": {
-                    "force": [ -35, 0 ]
+            "touching": [
+                {
+                    "action": "apply-force",
+                    "options": {
+                        "force": [ -35, 0 ]
+                    }
                 }
-            }
+            ]
         }
     ], 
     "name": "platform", 

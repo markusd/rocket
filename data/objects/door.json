@@ -18,19 +18,23 @@
             "texture": "",
             "type": "box",
             "sensor": true,
-             "touching": {
-                "action": "door-open",
-                "requirements": {
-                    "possessions": ["key"]
-                },
-                "delay": 1,
-                "options": {}
-            },
-             "end-contact": {
-                "action": "door-close",
-                "delay": 1,
-                "options": {}
-            }
+            "touching": [
+                {
+                    "action": "door-open",
+                    "requirements": {
+                        "possessions": ["key"]
+                    },
+                    "delay": 1,
+                    "options": {}
+                }
+            ],
+            "end-contact": [
+                    {
+                    "action": "door-close",
+                    "delay": 1,
+                    "options": {}
+                }
+            ]
         }
     ], 
     "name": "door", 

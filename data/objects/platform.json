@@ -8,14 +8,16 @@
             "texture": "textures/platform", 
             "type": "box",
             "sensor": false,
-            "touching": {
-                "action": "refill", 
-                "delay": 1, 
-                "options": {
-                    "rate": 5,
-                    "capacity": 120
+            "touching": [
+                {
+                    "action": "refill", 
+                    "delay": 1, 
+                    "options": {
+                        "rate": 5,
+                        "capacity": 120
+                    }
                 }
-            }
+            ]
         }
     ], 
     "name": "platform", 

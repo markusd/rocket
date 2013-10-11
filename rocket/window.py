@@ -70,7 +70,7 @@ class Main(QGLWidget, b2ContactListener):
         self.player = Player(self.keyAdapter, self.world, self.level.spawnPoint)
         self.level.player = self.player
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/platform.json",
-            position=(0, 0), extension={"fixtures":[{"touching":{"options":{"rate": 10}}, "size": [25, 4]}]}))
+            position=(0, 0), extension={"fixtures":[{"touching":[{"options":{"rate": 10}}], "size": [25, 4]}]}))
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/door.json",
             position=(-14.5, 25)))
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/key.json",

@@ -93,12 +93,8 @@ class LevelBase(b2ContactListener):
         if len(requirements.get("possessions", [])) == 0:
             return True
         return set(player.possessions).issuperset(set(requirements["possessions"]))
-            
-            
-    def PreSolve(self, contact, old_manifold):
-        pass
-    
-    def BeginContact(self, contact):
+                   
+    def processContact(self, contact, begin):
         #TODO actions can apply to other objects, not only players
         if self.player is None:
             return
@@ -112,52 +108,10 @@ class LevelBase(b2ContactListener):
         else:
             return
         
-        obj = fix.body.userData
-        fixU = fix.userData
-        
-        if fixU is None or fixU.get("touching", None) is None:
-            return
-    
-        if fixU["touching"]["action"] == "refill":
-            def refill(player, fixU, dt):
-                amount = min(fixU["touching"]["options"]["capacity"], min(100.0 - player.fuel, fixU["touching"]["options"]["rate"] * dt))
-                player.fuel = min(100, player.fuel + amount)
-                fixU["touching"]["options"]["capacity"] = fixU["touching"]["options"]["capacity"] - amount
-            now = Clock.sysTime()
-            self.actions[(player, fix)] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > fixU["touching"]["delay"] and self.checkRequirements(player, fixU["touching"].get("requirements", None)) else None
-        elif fixU["touching"]["action"] == "door-open":
-            now = Clock.sysTime()
-            self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > fixU["touching"]["delay"] and self.checkRequirements(player, fixU["touching"].get("requirements", None)) else None
-        elif fixU["touching"]["action"] == "pick-up":
-            def destroy_obj(body, obj):
-                self.world.DestroyBody(body)
-                self.objects.remove(obj)
-            if self.checkRequirements(player, fixU["touching"].get("requirements", None)):
-                player.possessions.append(fixU["touching"]["options"]["name"])
-                contact.enabled = False
-                self.actions[(player, fix)] = lambda dt: destroy_obj(fix.body, obj)
-        elif fixU["touching"]["action"] == "apply-force":
-            def apply_force(player, force, point):
-                f = player.body.GetWorldVector(localVector=force)
-                p = player.body.GetWorldPoint(localPoint=point)
-                player.body.ApplyForce(force, p, True)
-            self.actions[(player, fix)] = lambda dt: apply_force(player, fixU["touching"]["options"]["force"], (0, 0))
-    
-    def EndContact(self, contact):
-        if self.player is None:
-            return
-
-        if contact.fixtureA.body == self.player.body:
-            player = contact.fixtureA.body.userData
-            fix = contact.fixtureB
-        elif contact.fixtureB.body == self.player.body:
-            player = contact.fixtureB.body.userData
-            fix = contact.fixtureA
-        else:
-            return
-        
         k = (player, fix)
-        if k in self.actions:
+        
+        # if the contact is ending, delete actions
+        if  k in self.actions:
             del self.actions[k]
         
         obj = fix.body.userData
@@ -166,21 +120,62 @@ class LevelBase(b2ContactListener):
         # Getting the user data of a fixture that is currently
         # begin deleted results in the process crashing without
         # any error due to heap corruption
-        if getattr(obj, "destroyingFixture", False):
+        if not begin and getattr(obj, "destroyingFixture", False):
             return
         
         fixU = fix.userData
         
-        if fixU is None or fixU.get("end-contact", None) is None:
+        if fixU is None:
             return
         
-        if fixU["end-contact"]["action"] == "door-close":
-            action = lambda: obj.close() if self.checkRequirements(player, fixU["touching"].get("requirements", None)) else None
-            delay = fixU["end-contact"].get("delay", 0)
-            if delay > 0:
-                self.timers.append(Timer(interval=delay, start=True, func=action, repeat=False))
-            else:
-                action()
+        
+        actions =  []
+        #actions.extend(fixU.get("begin-contact", []) if begin else [])
+        actions.extend(fixU.get("touching", []) if begin else [])
+        actions.extend(fixU.get("end-contact", []) if not begin else [])
+        
+        for action in actions:
+            if action["action"] == "door-close":
+                func = lambda: obj.close() if self.checkRequirements(player, action.get("requirements", None)) else None
+                delay = action.get("delay", 0)
+                if delay > 0:
+                    self.timers.append(Timer(interval=delay, start=True, func=func, repeat=False))
+                else:
+                    func()
+    
+            if action["action"] == "refill":
+                def refill(player, fixU, dt):
+                    amount = min(action["options"]["capacity"], min(100.0 - player.fuel, action["options"]["rate"] * dt))
+                    player.fuel = min(100, player.fuel + amount)
+                    action["options"]["capacity"] = action["options"]["capacity"] - amount
+                now = Clock.sysTime()
+                self.actions[(player, fix)] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
+            elif action["action"] == "door-open":
+                now = Clock.sysTime()
+                self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
+            elif action["action"] == "pick-up":
+                def destroy_obj(body, obj):
+                    self.world.DestroyBody(body)
+                    self.objects.remove(obj)
+                if self.checkRequirements(player, action.get("requirements", None)):
+                    player.possessions.append(action["options"]["name"])
+                    contact.enabled = False
+                    self.actions[(player, fix)] = lambda dt: destroy_obj(fix.body, obj)
+            elif action["action"] == "apply-force":
+                def apply_force(player, force, point):
+                    f = player.body.GetWorldVector(localVector=force)
+                    p = player.body.GetWorldPoint(localPoint=point)
+                    player.body.ApplyForce(force, p, True)
+                self.actions[(player, fix)] = lambda dt: apply_force(player, action["options"]["force"], (0, 0))
+            
+    def PreSolve(self, contact, old_manifold):
+        pass
+    
+    def BeginContact(self, contact):
+        self.processContact(contact=contact, begin=True)
+    
+    def EndContact(self, contact):
+        self.processContact(contact=contact, begin=False)
     
     def PostSolve(self, contact, impulse):
         pass

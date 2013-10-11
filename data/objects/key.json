@@ -8,12 +8,14 @@
             "texture": "textures/key", 
             "type": "box",
             "sensor": false,
-            "touching": {
-                "action": "pick-up",
-                "options": {
-                    "name": "key"
+            "touching": [
+                {
+                    "action": "pick-up",
+                    "options": {
+                        "name": "key"
+                    }
                 }
-            }
+            ]
         }
     ], 
     "name": "platform", 
