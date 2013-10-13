@@ -11,9 +11,10 @@
         },
         {
             "size": [
-                25, 
+                12.5, 
                 16
             ], 
+            "position": [ -6.25, 0 ],
             "texture": "", 
             "type": "box",
             "sensor": true,
@@ -28,9 +29,10 @@
         },
         {
             "size": [
-                175, 
+                87.5, 
                 16
             ], 
+            "position": [ -43.75, 0 ],
             "texture": "", 
             "type": "box",
             "sensor": true,
@@ -45,9 +47,10 @@
         },
         {
             "size": [
-                300, 
+                150, 
                 16
             ], 
+            "position": [ -75, 0 ],
             "texture": "", 
             "type": "box",
             "sensor": true,

@@ -49,8 +49,10 @@ class Object():
         for f in obj["fixtures"]:
             if f["type"] == "box":
                 size = f["size"]
+                fpos = f.get("position", (0, 0))
+                fangle = f.get("angle", 0)
                 if f.get("auto-create", True):
-                    self.body.CreatePolygonFixture(box=(size[0]*0.5, size[1]*0.5), isSensor=f["sensor"], userData=f)
+                    self.body.CreatePolygonFixture(box=(size[0]*0.5, size[1]*0.5, fpos, fangle), isSensor=f["sensor"], userData=f)
             else:
                 raise NotImplementedError()
             
