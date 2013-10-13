@@ -21,6 +21,7 @@ from utils.opengl import *
 from rocket.renderer import Renderer
 from rocket.clouds import CloudManager
 from rocket.level import Level
+from rocket.object import Object
 
 VIEWPORT_WIDTH = 768*2
 VIEWPORT_HEIGHT = 512*2
@@ -39,6 +40,7 @@ class Editor(QMainWindow):
         
         self.viewport = Viewport(self)
         self.toolbox = Toolbox(self)
+        self.viewport.toolbox = self.toolbox
         
         splitter = QSplitter(QtCore.Qt.Horizontal)
         splitter.insertWidget(0, self.toolbox)
@@ -134,10 +136,12 @@ class Toolbox(QWidget):
         layout = QVBoxLayout()
         
         self.layer_level = QRadioButton("Level")
+        self.layer_objects = QRadioButton("Objects")
         self.layer_enemies = QRadioButton("Enemies")
         
         group = QHBoxLayout()
         group.addWidget(self.layer_level)
+        group.addWidget(self.layer_objects)
         group.addWidget(self.layer_enemies)
         layout.addLayout(group)
         
@@ -154,6 +158,7 @@ class Toolbox(QWidget):
 
         for f in glob.glob("data/objects/*.json"):
             item = QTreeWidgetItem([splitext(basename(f))[0]])
+            item.setData(0, QtCore.Qt.UserRole, f)
             self.objectTree.addTopLevelItem(item)
             
             
@@ -188,6 +193,7 @@ class Viewport(QGLWidget):
         }
         
         self.selectedPoints = []
+        self.objectPreview = None
         
         self.timer = QtCore.QTimer(self)
         QtCore.QObject.connect(self.timer, QtCore.SIGNAL('timeout()'), self.updateGL)
@@ -238,7 +244,14 @@ class Viewport(QGLWidget):
         
         self.timer.start()
         self.clock.reset()
-
+        
+    def selectedObject(self):
+        item = self.toolbox.objectTree.currentItem()
+        if item is None:
+            return None
+        name = str(item.text(0))
+        f = item.data(0, QtCore.Qt.UserRole)
+        return (name, f)
         
     def keyPressEvent(self, e):
         pressed = lambda x: x in self.keyAdapter.pressed
@@ -264,7 +277,12 @@ class Viewport(QGLWidget):
             self.offset = (self.offset[0] - dx, self.offset[1] - dy)
         self.mouse["pos"] = new
         
-        
+        if self.toolbox.layer_objects.isChecked():
+            name, f = self.selectedObject()
+            if self.objectPreview is not None:
+                self.objectPreview.destroy()
+            self.objectPreview = Object.loadFromFile(world=self.world, fileName=f,
+                position=self.mouse["wpos"]())
         
 
     def mousePressEvent(self, e):
@@ -279,41 +297,44 @@ class Viewport(QGLWidget):
         self.mouse["pos"] = (e.pos().x(), self.height() - e.pos().y())
         self.mouse[e.button()] = False
         
-        if e.button() == QtCore.Qt.LeftButton:
-            if self.mouse["pos"] == self.mouse["press_pos"]:
-                if not self.mouse["double_clicked"][QtCore.Qt.LeftButton]:
-                    if pressed("s"):
-                        self.level.spawnPoint = self.mouse["wpos"]()
-                    else:
-                        if len(self.selectedPoints) > 0 and pressed("shift"):
-                            dx = abs(self.selectedPoints[-1][0] - (self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom)
-                            dy = abs(self.selectedPoints[-1][1] - (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
-                            if dx > dy:
-                                p = ((self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom, self.selectedPoints[-1][1])
-                            else:
-                                p = (self.selectedPoints[-1][0], (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+        if self.toolbox.layer_level.isChecked():
+            if e.button() == QtCore.Qt.LeftButton:
+                if self.mouse["pos"] == self.mouse["press_pos"]:
+                    if not self.mouse["double_clicked"][QtCore.Qt.LeftButton]:
+                        if pressed("s"):
+                            self.level.spawnPoint = self.mouse["wpos"]()
                         else:
-                            p = self.mouse["wpos"]()
-                        self.selectedPoints.append(p)
-            
-        print(self.selectedPoints)
+                            if len(self.selectedPoints) > 0 and pressed("shift"):
+                                dx = abs(self.selectedPoints[-1][0] - (self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom)
+                                dy = abs(self.selectedPoints[-1][1] - (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+                                if dx > dy:
+                                    p = ((self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom, self.selectedPoints[-1][1])
+                                else:
+                                    p = (self.selectedPoints[-1][0], (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+                            else:
+                                p = self.mouse["wpos"]()
+                            self.selectedPoints.append(p)
     
     def mouseDoubleClickEvent(self, e):
         self.mouse["pos"] = (e.pos().x(), self.height() - e.pos().y())
         self.mouse["double_clicked"][e.button()] = True
         
-        if e.button() == QtCore.Qt.LeftButton:
-        #    self.selectedPoints.append(self.mouse["wpos"]())
-            print(self.selectedPoints)
-            self.level.edgeFixtures.CreateEdgeChain(self.selectedPoints)
-            self.level.list = -1
-            self.selectedPoints = []
+        if self.toolbox.layer_level.isChecked():
+            if e.button() == QtCore.Qt.LeftButton:
+                self.level.edgeFixtures.CreateEdgeChain(self.selectedPoints)
+                self.level.list = -1
+                self.selectedPoints = []
+        elif self.toolbox.layer_objects.isChecked():
+            name, f = self.selectedObject()
+            self.level.objects.append(Object.loadFromFile(world=self.world, fileName=f,
+                position=self.mouse["wpos"]()))
         
         
     def keyReleaseEvent(self, e):
         self.keyAdapter.keyEvent(e)
 
     def paintGL(self):
+        pressed = lambda x: x in self.keyAdapter.pressed
         dt = self.clock.get()
 
         self.elapsed += dt
@@ -357,16 +378,32 @@ class Viewport(QGLWidget):
         glColor3f(1.0, 0.0, 0.0)
         glPointSize(3.0)
         glBegin(GL_POINTS)
-        glVertex2f(self.level.spawnPoint[0]*self.zoom, self.level.spawnPoint[1]*self.zoom)
+        glVertex2f(self.level.spawnPoint[0], self.level.spawnPoint[1])
         glEnd()
         
         
-        glColor3f(1.0, 1.0, 0.0)
-        glBegin(GL_LINE_STRIP)
-        if len(self.selectedPoints) > 1:
-            for p in self.selectedPoints:
-                glVertex2f(p[0], p[1])
-        glEnd()
+        if self.toolbox.layer_level.isChecked():
+            glDisable(GL_TEXTURE_2D)
+            glColor3f(1.0, 1.0, 0.0)
+            glBegin(GL_LINE_STRIP)
+            if len(self.selectedPoints) > 1:
+                for p in self.selectedPoints:
+                    glVertex2f(p[0], p[1])
+            if len(self.selectedPoints) > 0:
+                glColor3f(1.0, 0.0, 1.0)
+                if pressed("shift"):
+                    dx = abs(self.selectedPoints[-1][0] - (self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom)
+                    dy = abs(self.selectedPoints[-1][1] - (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+                    if dx > dy:
+                        p = ((self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom, self.selectedPoints[-1][1])
+                    else:
+                        p = (self.selectedPoints[-1][0], (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+                else:
+                    p = self.mouse["wpos"]()
+                glVertex2fv(self.selectedPoints[-1])
+                glVertex2fv(p)
+            glEnd()
+        
         glPopMatrix()
         
 
@@ -381,4 +418,12 @@ class Viewport(QGLWidget):
         glTranslatef(self.offset[0], self.offset[1], 0)
         glScale(self.zoom, self.zoom, 1)
         self.level.render()
+        
+        #TODO: pretty bad hack
+        if not self.toolbox.layer_objects.isChecked() and self.objectPreview is not None:
+            self.objectPreview.destroy()
+            self.objectPreview = None
+            
+        if self.objectPreview is not None:
+            self.objectPreview.render()
         glPopMatrix()

@@ -15,6 +15,12 @@ class Object():
         self.type = "static"
         self.list = -1
         
+        
+    def destroy(self):
+        body = getattr(self, "body", None)
+        if body is not None:
+            self.world.DestroyBody(body)
+        
     #def serialize(self, fileName):
     #    raise NotImplementedError()
     #    object = {}
@@ -22,6 +28,13 @@ class Object():
     #    fp = open(fileName, "w")
     #    json.dump(object, fp, sort_keys=True, indent=4)
     #    fp.close()
+    
+    def getDict(self):
+        result = {}
+        #result["name"] = self.name
+        result["filename"] = self.fileName
+        result["position"] = self.position
+        return result
     
     @staticmethod
     def loadFromFile(world, fileName, position=(0, 0), **kwargs):
@@ -32,6 +45,7 @@ class Object():
         splitted = object["class"].rsplit(".", 1)
         cls = getattr(sys.modules[splitted[0]], splitted[-1])
         result = cls(world)
+        result.fileName = fileName
         result._deserialize(object, position, **kwargs)
         return result
         
@@ -40,6 +54,7 @@ class Object():
         
         self.name = obj["name"]
         self.type = obj["type"]
+        self.position = position
         
         if self.type == "static":
             self.body = self.world.CreateStaticBody(position=position, userData=self)
@@ -114,6 +129,7 @@ class Door(Object):
         self.speed = obj["speed"]
         self.direction = obj["direction"]
         self.door_index = obj["door_index"]
+        self.position = position
         
         self.body = self.world.CreateStaticBody(position=position, userData=self)
         

@@ -2,6 +2,7 @@ from Box2D import *
 from OpenGL.GL import *
 
 from rocket.player import *
+from rocket.object import Object
 
 from utils import Clock, Timer
 
@@ -62,12 +63,16 @@ class LevelBase(b2ContactListener):
         level = { "spawnPoint": self.spawnPoint,
                   "spawnOffset": self.spawnOffset,
                   "name": self.name,
-                  "edgeFixtures": []
+                  "edgeFixtures": [],
+                  "objects": []
         }
         
         #TODO: Need to save chain caps
         for f in self.edgeFixtures:
             level["edgeFixtures"].append(f.shape.vertices)
+        
+        for o in self.objects:
+            level["objects"].append(o.getDict())
         
         fp = open(fileName, "w")
         json.dump(level, fp, sort_keys=True, indent=4)
@@ -85,6 +90,10 @@ class LevelBase(b2ContactListener):
         self.edgeFixtures = self.world.CreateStaticBody()
         for f in level["edgeFixtures"]:
             self.edgeFixtures.CreateEdgeChain(f)
+            
+        for o in level.get("objects", []):
+            self.objects.append(Object.loadFromFile(world=self.world, fileName=o["filename"],
+                        position=o["position"]))
             
             
     def checkRequirements(self, player, requirements):

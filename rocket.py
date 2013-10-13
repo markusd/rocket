@@ -23,6 +23,6 @@ if __name__ == "__main__":
     # create game window
     app = QtGui.QApplication(sys.argv)
     main = rocket.window.Main()
-    main.createLevel("data/levels/test.json")
+    main.createLevel("data/levels/test2.json")
     main.show()
     sys.exit(app.exec_())
