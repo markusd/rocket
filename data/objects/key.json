@@ -18,7 +18,7 @@
             ]
         }
     ], 
-    "name": "blower", 
+    "name": "key", 
     "type": "dynamic",
     "class": "rocket.object.Object"
 }
