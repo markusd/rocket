@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+import glob
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -103,7 +104,8 @@ class Editor(QMainWindow):
         if od.exec_():
             self.fileName = str(od.selectedFiles()[0])
             self.modified = False
-            self.viewport.level.deserialize(self.fileName)
+            self.viewport.createWorld()
+            self.viewport.createLevel("", self.fileName)
     
     def onSavePressed(self):
         if self.fileName == "" or self.sender() == self.saveas:
@@ -128,6 +130,34 @@ class Toolbox(QWidget):
         
         self.setMaximumWidth(300)
         self.setMinimumWidth(300)
+        
+        layout = QVBoxLayout()
+        
+        self.layer_level = QRadioButton("Level")
+        self.layer_enemies = QRadioButton("Enemies")
+        
+        group = QHBoxLayout()
+        group.addWidget(self.layer_level)
+        group.addWidget(self.layer_enemies)
+        layout.addLayout(group)
+        
+        self.layer_level.setChecked(True)
+        
+        layout.addWidget(QLabel("Objects:"))
+            
+        self.objectTree = QTreeWidget(self)
+        self.objectTree.setColumnCount(1)
+        self.objectTree.setHeaderLabels(["Name"])
+        self.objectTree.header().resizeSection(0, 245)
+        self.objectTree.setIconSize(QtCore.QSize(32, 32))
+        layout.addWidget(self.objectTree)
+
+        for f in glob.glob("data/objects/*.json"):
+            item = QTreeWidgetItem([splitext(basename(f))[0]])
+            self.objectTree.addTopLevelItem(item)
+            
+            
+        self.setLayout(layout)
         
 
 class Viewport(QGLWidget):
@@ -182,8 +212,10 @@ class Viewport(QGLWidget):
         self.world.subStepping = False
         self.world.renderer = Renderer()
         
-    def createLevel(self, name):
+    def createLevel(self, name, fileName=None):
         self.level = Level(self.keyAdapter, self.world, name)
+        if fileName is not None:
+            self.level.deserialize(fileName)
     
     def initializeGL(self):
         if bool(glXSwapIntervalSGI):
@@ -253,7 +285,16 @@ class Viewport(QGLWidget):
                     if pressed("s"):
                         self.level.spawnPoint = self.mouse["wpos"]()
                     else:
-                        self.selectedPoints.append(self.mouse["wpos"]())
+                        if len(self.selectedPoints) > 0 and pressed("shift"):
+                            dx = abs(self.selectedPoints[-1][0] - (self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom)
+                            dy = abs(self.selectedPoints[-1][1] - (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+                            if dx > dy:
+                                p = ((self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom, self.selectedPoints[-1][1])
+                            else:
+                                p = (self.selectedPoints[-1][0], (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom)
+                        else:
+                            p = self.mouse["wpos"]()
+                        self.selectedPoints.append(p)
             
         print(self.selectedPoints)
     
@@ -311,16 +352,30 @@ class Viewport(QGLWidget):
             glVertex2f( 10000.0,  x * 32.0)
         glEnd()
         
+        glScale(self.zoom, self.zoom, 1)
+        
         glColor3f(1.0, 0.0, 0.0)
         glPointSize(3.0)
         glBegin(GL_POINTS)
         glVertex2f(self.level.spawnPoint[0]*self.zoom, self.level.spawnPoint[1]*self.zoom)
         glEnd()
+        
+        
+        glColor3f(1.0, 1.0, 0.0)
+        glBegin(GL_LINE_STRIP)
+        if len(self.selectedPoints) > 1:
+            for p in self.selectedPoints:
+                glVertex2f(p[0], p[1])
+        glEnd()
         glPopMatrix()
+        
+
+        
+        glColor3f(1.0, 1.0, 1.0)
             
-        #self.world.renderer.StartDraw(center=self.offset, zoom=self.zoom, screen=(self.width(), self.height()))
-        #self.world.DrawDebugData()
-        #self.world.renderer.EndDraw()
+        self.world.renderer.StartDraw(center=self.offset, zoom=self.zoom, screen=(self.width(), self.height()))
+        self.world.DrawDebugData()
+        self.world.renderer.EndDraw()
 
         glPushMatrix()
         glTranslatef(self.offset[0], self.offset[1], 0)
