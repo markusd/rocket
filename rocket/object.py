@@ -30,8 +30,7 @@ class Object():
     #    fp.close()
     
     def getDict(self):
-        result = {}
-        #result["name"] = self.name
+        result = dict(self.creationParameters)
         result["filename"] = self.fileName
         result["position"] = self.position
         return result
@@ -51,6 +50,8 @@ class Object():
         
     def _deserialize(self, obj, position=(0, 0), **kwargs):
         obj = nested_merge(kwargs.get("extension", dict()), obj)
+        
+        self.creationParameters = obj
         
         self.name = obj["name"]
         self.type = obj["type"]
@@ -123,6 +124,8 @@ class Door(Object):
         
     def _deserialize(self, obj, position=(0, 0), **kwargs):
         obj = nested_merge(kwargs.get("extension", dict()), obj)
+        
+        self.creationParameters = obj
         
         self.name = obj["name"]
         self.type = obj["type"]

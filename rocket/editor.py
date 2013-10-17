@@ -2,6 +2,7 @@
 
 import math
 import glob
+import json
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -25,6 +26,19 @@ from rocket.object import Object
 
 VIEWPORT_WIDTH = 768*2
 VIEWPORT_HEIGHT = 512*2
+
+class QueryCallback(b2QueryCallback):
+    def __init__(self, exceptions=[]): 
+        b2QueryCallback.__init__(self)
+        self.exceptions = exceptions
+        self.obj = None
+
+    def ReportFixture(self, fixture):
+        self.obj = fixture.body.userData
+        if self.obj in self.exceptions:
+            self.obj = None
+
+        return self.obj is None
 
 class Editor(QMainWindow):
     
@@ -161,6 +175,14 @@ class Toolbox(QWidget):
             item.setData(0, QtCore.Qt.UserRole, f)
             self.objectTree.addTopLevelItem(item)
             
+        
+        self.textEdit = QTextEdit(self)
+        layout.addWidget(self.textEdit)
+        
+        self.applyButton = QPushButton("Apply", self)
+        QtCore.QObject.connect(self.applyButton, QtCore.SIGNAL('clicked()'), self.editor.viewport.onApplyButtonPressed)
+        layout.addWidget(self.applyButton)
+            
             
         self.setLayout(layout)
         
@@ -193,6 +215,7 @@ class Viewport(QGLWidget):
         }
         
         self.selectedPoints = []
+        self.selectedObject = None
         self.objectPreview = None
         
         self.timer = QtCore.QTimer(self)
@@ -245,10 +268,32 @@ class Viewport(QGLWidget):
         self.timer.start()
         self.clock.reset()
         
-    def selectedObject(self):
-        item = self.toolbox.objectTree.currentItem()
-        if item is None:
-            return None
+    def onApplyButtonPressed(self):
+        try:
+            data = json.loads(self.toolbox.textEdit.toPlainText())
+            #self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/blower.json",
+            #position=(140,60)))
+            #self.level.
+            if self.selectedObject is None:
+                raise Exception("No object selected")
+            self.level.destroyObject(self.selectedObject)
+            filename = data["filename"]
+            position = data["position"]
+            del data["filename"]
+            del data["position"]
+            self.level.objects.append(Object.loadFromFile(world=self.world, fileName=filename,
+                position=position, extension=data))
+            self.selectedObject = self.level.objects[-1]
+            #TODO destroy object and create new one
+        except Exception as e:
+            self.selectedObject = None
+            QMessageBox.about(self, "Error", "%s" % e)
+        
+    def getUserSelectedObject(self):
+        item = self.toolbox.objectTree.selectedItems()
+        if item is None or len(item) == 0:
+            return (None, None)
+        item = item[0]
         name = str(item.text(0))
         f = item.data(0, QtCore.Qt.UserRole)
         return (name, f)
@@ -278,11 +323,13 @@ class Viewport(QGLWidget):
         self.mouse["pos"] = new
         
         if self.toolbox.layer_objects.isChecked():
-            name, f = self.selectedObject()
+            name, f = self.getUserSelectedObject()
             if self.objectPreview is not None:
                 self.objectPreview.destroy()
-            self.objectPreview = Object.loadFromFile(world=self.world, fileName=f,
-                position=self.mouse["wpos"]())
+                self.objectPreview = None
+            if name is not None and f is not None:
+                self.objectPreview = Object.loadFromFile(world=self.world, fileName=f,
+                    position=self.mouse["wpos"]())
         
 
     def mousePressEvent(self, e):
@@ -314,20 +361,41 @@ class Viewport(QGLWidget):
                             else:
                                 p = self.mouse["wpos"]()
                             self.selectedPoints.append(p)
+            elif e.button() == QtCore.Qt.RightButton:
+                if self.mouse["pos"] == self.mouse["press_pos"]:
+                    if len(self.selectedPoints) > 0:
+                        self.selectedPoints.pop()
+        elif self.toolbox.layer_objects.isChecked():
+            if e.button() == QtCore.Qt.LeftButton:
+                if self.mouse["pos"] == self.mouse["press_pos"]:
+                    if not self.mouse["double_clicked"][QtCore.Qt.LeftButton]:
+                        p = self.mouse["wpos"]()
+                        aabb = b2AABB(lowerBound=(p[0]-0.001, p[1]-0.001), upperBound=(p[0]+0.001, p[1]+0.001))
+                        query = QueryCallback([self.objectPreview])
+                        self.world.QueryAABB(query, aabb)
+                        if query.obj is not None:
+                            self.selectedObject = query.obj
+                            text = json.dumps(query.obj.getDict(), sort_keys=True, indent=4)
+                            self.toolbox.textEdit.setText(text)
+            elif e.button() == QtCore.Qt.RightButton:
+                if self.mouse["pos"] == self.mouse["press_pos"]:
+                    self.toolbox.objectTree.clearSelection()
+                    self.toolbox.objectTree.selectionModel().clearSelection()
     
     def mouseDoubleClickEvent(self, e):
         self.mouse["pos"] = (e.pos().x(), self.height() - e.pos().y())
         self.mouse["double_clicked"][e.button()] = True
         
         if self.toolbox.layer_level.isChecked():
-            if e.button() == QtCore.Qt.LeftButton:
+            if e.button() == QtCore.Qt.LeftButton and len(self.selectedPoints) > 1:
                 self.level.edgeFixtures.CreateEdgeChain(self.selectedPoints)
                 self.level.list = -1
                 self.selectedPoints = []
         elif self.toolbox.layer_objects.isChecked():
-            name, f = self.selectedObject()
-            self.level.objects.append(Object.loadFromFile(world=self.world, fileName=f,
-                position=self.mouse["wpos"]()))
+            name, f = self.getUserSelectedObject()
+            if name is not None and f is not None:
+                self.level.objects.append(Object.loadFromFile(world=self.world, fileName=f,
+                    position=self.mouse["wpos"]()))
         
         
     def keyReleaseEvent(self, e):

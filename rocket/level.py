@@ -72,6 +72,7 @@ class LevelBase(b2ContactListener):
             level["edgeFixtures"].append(f.shape.vertices)
         
         for o in self.objects:
+            # TODO build difference of object json and getDict
             level["objects"].append(o.getDict())
         
         fp = open(fileName, "w")
@@ -93,7 +94,11 @@ class LevelBase(b2ContactListener):
             
         for o in level.get("objects", []):
             self.objects.append(Object.loadFromFile(world=self.world, fileName=o["filename"],
-                        position=o["position"]))
+                        position=o["position"], extension=o))
+            
+    def destroyObject(self, obj):
+        obj.destroy()
+        self.objects.remove(obj)
             
             
     def checkRequirements(self, player, requirements):
@@ -163,13 +168,10 @@ class LevelBase(b2ContactListener):
                 now = Clock.sysTime()
                 self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
             elif action["action"] == "pick-up":
-                def destroy_obj(body, obj):
-                    self.world.DestroyBody(body)
-                    self.objects.remove(obj)
                 if self.checkRequirements(player, action.get("requirements", None)):
                     player.possessions.append(action["options"]["name"])
                     contact.enabled = False
-                    self.actions[(player, fix)] = lambda dt: destroy_obj(fix.body, obj)
+                    self.actions[(player, fix)] = lambda dt: self.destroyObject(obj)
             elif action["action"] == "apply-force":
                 def apply_force(player, force, point):
                     f = player.body.GetWorldVector(localVector=force)
