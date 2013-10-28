@@ -5,19 +5,13 @@
                 2, 
                 2
             ], 
-            "texture": "textures/key", 
+            "texture": "textures/crate", 
             "type": "box",
             "sensor": false,
-            "density": 1,
-            "touching": [
-                {
-                    "action": "pick-up",
-                    "name": "key"
-                }
-            ]
+            "density": 1
         }
     ], 
-    "name": "key", 
+    "name": "box", 
     "type": "dynamic",
     "class": "rocket.object.Object"
 }

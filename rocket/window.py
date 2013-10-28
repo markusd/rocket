@@ -30,6 +30,8 @@ class Main(QGLWidget, b2ContactListener):
 
     def __init__(self):
         QGLWidget.__init__(self)
+        self.setFocusPolicy(QtCore.Qt.WheelFocus)
+        self.setMouseTracking(True)
         
         self.frames = 0
         self.fps = 0
@@ -40,6 +42,11 @@ class Main(QGLWidget, b2ContactListener):
         self.offset = (0, 0)
         
         self.keyAdapter = KeyAdapter()
+        
+        self.mouse = { "pos": (0, 0), QtCore.Qt.LeftButton: False, QtCore.Qt.RightButton: False, QtCore.Qt.MidButton: False,
+                      "wpos": lambda: ((self.mouse["pos"][0] - VIEWPORT_WIDTH*0.5 - self.offset[0])/self.zoom, (self.mouse["pos"][1] - VIEWPORT_HEIGHT*0.5 - self.offset[1])/self.zoom),
+                      "double_clicked": { QtCore.Qt.LeftButton: False, QtCore.Qt.RightButton: False, QtCore.Qt.MidButton: False} , "press_pos": (0, 0)
+        }
         
         self.timer = QtCore.QTimer(self)
         QtCore.QObject.connect(self.timer, QtCore.SIGNAL('timeout()'), self.updateGL)
@@ -67,11 +74,11 @@ class Main(QGLWidget, b2ContactListener):
     def createLevel(self, name):
         self.level = Level(self.keyAdapter, self.world)
         self.level.deserialize(name)
-        self.player = Player(self.keyAdapter, self.world, self.level.spawnPoint)
+        self.player = Player(self.keyAdapter, self.mouse, self.world, self.level, self.level.spawnPoint)
         self.level.player = self.player
         return
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/platform.json",
-            position=(0, 0), extension={"fixtures":[{"touching":[{"options":{"rate": 10}}], "size": [25, 4]}]}))
+            position=(0, 0), extension={"fixtures":[{"touching":[{"rate": 10}], "size": [25, 4]}]}))
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/door.json",
             position=(-14.5, 25)))
         self.level.objects.append(Object.loadFromFile(world=self.world, fileName="data/objects/key.json",
@@ -114,6 +121,26 @@ class Main(QGLWidget, b2ContactListener):
         self.timer.start()
         self.clock.reset()
         
+    def mouseMoveEvent(self, e):
+        new = (e.pos().x(), self.height() - e.pos().y())
+        self.mouse["pos"] = new    
+
+    def mousePressEvent(self, e):
+        self.mouse["pos"] = (e.pos().x(), self.height() - e.pos().y())
+        self.mouse["press_pos"] = self.mouse["pos"]
+        self.mouse[e.button()] = True
+        self.mouse["double_clicked"][e.button()] = False
+        
+    def mouseReleaseEvent(self, e):
+        pressed = lambda x: x in self.keyAdapter.pressed
+        
+        self.mouse["pos"] = (e.pos().x(), self.height() - e.pos().y())
+        self.mouse[e.button()] = False
+    
+    def mouseDoubleClickEvent(self, e):
+        self.mouse["pos"] = (e.pos().x(), self.height() - e.pos().y())
+        self.mouse["double_clicked"][e.button()] = True
+        
     def keyPressEvent(self, e):
         pressed = lambda x: x in self.keyAdapter.pressed
         
@@ -149,7 +176,7 @@ class Main(QGLWidget, b2ContactListener):
             
         self.level.update(dt)
         self.player.update(dt)
-            
+        
         self.world.Step(dt, 8, 3)
         self.world.ClearForces()
         
@@ -169,9 +196,9 @@ class Main(QGLWidget, b2ContactListener):
             
             
         self.cloudManager.render(dt, self.offset, self.player.body.linearVelocity)
-        self.world.renderer.StartDraw(center=self.offset, zoom=self.zoom, screen=(self.width(), self.height()))
-        self.world.DrawDebugData()
-        self.world.renderer.EndDraw()
+        #self.world.renderer.StartDraw(center=self.offset, zoom=self.zoom, screen=(self.width(), self.height()))
+        #self.world.DrawDebugData()
+        #self.world.renderer.EndDraw()
         
         
         glPushMatrix()
@@ -256,14 +283,14 @@ class Main(QGLWidget, b2ContactListener):
             self.offset = (self.offset[0], self.offset[1] + 100*dt)
 
 
-        if self.player.body.transform.position[0]*self.zoom + self.offset[0] > 250:
+        if (self.player.body.transform.position[0]+self.player.body.linearVelocity[0]*2)*self.zoom + self.offset[0] > 250:
             self.offset = (self.offset[0] - 200*dt, self.offset[1])
             
-        if self.player.body.transform.position[0]*self.zoom + self.offset[0] < -250:
+        if (self.player.body.transform.position[0]+self.player.body.linearVelocity[0]*2)*self.zoom + self.offset[0] < -250:
             self.offset = (self.offset[0] + 200*dt, self.offset[1])
         
-        if self.player.body.transform.position[1]*self.zoom + self.offset[1] > 250:
+        if (self.player.body.transform.position[1]+self.player.body.linearVelocity[1]*2)*self.zoom + self.offset[1] > 250:
             self.offset = (self.offset[0], self.offset[1] - 200*dt)
             
-        if self.player.body.transform.position[1]*self.zoom + self.offset[1] < -250:
+        if (self.player.body.transform.position[1]+self.player.body.linearVelocity[1]*2)*self.zoom + self.offset[1] < -250:
             self.offset = (self.offset[0], self.offset[1] + 200*dt)

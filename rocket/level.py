@@ -48,7 +48,9 @@ class LevelBase(b2ContactListener):
         #self.actions.clear()    
 
         for o in self.objects:
-            o.update(dt)
+            func = o.update(dt)
+            if func:
+                func(self)
         
     def render(self):
         if self.list == -1:
@@ -67,7 +69,7 @@ class LevelBase(b2ContactListener):
                   "objects": []
         }
         
-        #TODO: Need to save chain caps
+        #TODO: This saves too many fixtures
         for f in self.edgeFixtures:
             level["edgeFixtures"].append(f.shape.vertices)
         
@@ -107,6 +109,9 @@ class LevelBase(b2ContactListener):
         if len(requirements.get("possessions", [])) == 0:
             return True
         return set(player.possessions).issuperset(set(requirements["possessions"]))
+    
+    def scheduleAction(self, func, action):
+        pass
                    
     def processContact(self, contact, begin):
         #TODO actions can apply to other objects, not only players
@@ -125,7 +130,7 @@ class LevelBase(b2ContactListener):
         k = (player, fix)
         
         # if the contact is ending, delete actions
-        if  k in self.actions:
+        if  k in self.actions and not begin:
             del self.actions[k]
         
         obj = fix.body.userData
@@ -159,9 +164,9 @@ class LevelBase(b2ContactListener):
     
             if action["action"] == "refill":
                 def refill(player, fixU, dt):
-                    amount = min(action["options"]["capacity"], min(100.0 - player.fuel, action["options"]["rate"] * dt))
+                    amount = min(action["capacity"], min(100.0 - player.fuel, action["rate"] * dt))
                     player.fuel = min(100, player.fuel + amount)
-                    action["options"]["capacity"] = action["options"]["capacity"] - amount
+                    action["capacity"] = action["capacity"] - amount
                 now = Clock.sysTime()
                 self.actions[(player, fix)] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
             elif action["action"] == "door-open":
@@ -169,7 +174,7 @@ class LevelBase(b2ContactListener):
                 self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
             elif action["action"] == "pick-up":
                 if self.checkRequirements(player, action.get("requirements", None)):
-                    player.possessions.append(action["options"]["name"])
+                    player.possessions.append(action["name"])
                     contact.enabled = False
                     self.actions[(player, fix)] = lambda dt: self.destroyObject(obj)
             elif action["action"] == "apply-force":
@@ -177,7 +182,13 @@ class LevelBase(b2ContactListener):
                     f = player.body.GetWorldVector(localVector=force)
                     p = player.body.GetWorldPoint(localPoint=point)
                     player.body.ApplyForce(force, p, True)
-                self.actions[(player, fix)] = lambda dt: apply_force(player, action["options"]["force"], (0, 0))
+                self.actions[(player, fix)] = lambda dt: apply_force(player, action["force"], (0, 0))
+            elif action["action"] == "win":
+                pass
+            elif action["action"] == "destroy":
+                if self.checkRequirements(player, action.get("requirements", None)):
+                    #contact.enabled = False
+                    self.actions[(player, fix)] = lambda dt: self.destroyObject(obj)
             
     def PreSolve(self, contact, old_manifold):
         pass

@@ -1,0 +1,18 @@
+{
+    "fixtures": [
+        {
+            "size": [
+                2, 
+                2
+            ], 
+            "texture": "textures/cannon", 
+            "type": "box",
+            "sensor": false,
+            "density": 1
+        }
+    ], 
+    "name": "box", 
+    "type": "static",
+    "range": 400,
+    "class": "rocket.object.Cannon"
+}

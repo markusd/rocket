@@ -22,17 +22,15 @@
                 {
                     "action": "door-open",
                     "requirements": {
-                        "possessions": ["key"]
+                        "possessions": []
                     },
-                    "delay": 1,
-                    "options": {}
+                    "delay": 1
                 }
             ],
             "end-contact": [
                     {
                     "action": "door-close",
-                    "delay": 1,
-                    "options": {}
+                    "delay": 1
                 }
             ]
         }
@@ -42,6 +40,6 @@
     "class": "rocket.object.Door",
     "speed": 0.08,
     "state": 1.0,
-    "direction": -1,
+    "direction": [-1, 0],
     "door_index": 0
 }

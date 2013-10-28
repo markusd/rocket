@@ -12,10 +12,8 @@
                 {
                     "action": "refill", 
                     "delay": 1, 
-                    "options": {
-                        "rate": 5,
-                        "capacity": 120
-                    }
+                    "rate": 5,
+                    "capacity": 120
                 }
             ]
         }

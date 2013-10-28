@@ -21,9 +21,7 @@
             "touching": [
                 {
                     "action": "apply-force",
-                    "options": {
-                        "force": [ -100, 0 ]
-                    }
+                    "force": [ -100, 0 ]
                 }
             ]
         },
@@ -39,9 +37,7 @@
             "touching": [
                 {
                     "action": "apply-force",
-                    "options": {
-                        "force": [ -50, 0 ]
-                    }
+                    "force": [ -50, 0 ]
                 }
             ]
         },
@@ -57,9 +53,7 @@
             "touching": [
                 {
                     "action": "apply-force",
-                    "options": {
-                        "force": [ -35, 0 ]
-                    }
+                    "force": [ -35, 0 ]
                 }
             ]
         }
