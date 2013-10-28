@@ -108,52 +108,15 @@ class LevelBase(b2ContactListener):
             return True
         if len(requirements.get("possessions", [])) == 0:
             return True
+        if player is None:
+            return True
         return set(player.possessions).issuperset(set(requirements["possessions"]))
     
     def scheduleAction(self, func, action):
         pass
-                   
-    def processContact(self, contact, begin):
-        #TODO actions can apply to other objects, not only players
-        if self.player is None:
-            return
-
-        if contact.fixtureA.body == self.player.body:
-            player = contact.fixtureA.body.userData
-            fix = contact.fixtureB
-        elif contact.fixtureB.body == self.player.body:
-            player = contact.fixtureB.body.userData
-            fix = contact.fixtureA
-        else:
-            return
-        
-        k = (player, fix)
-        
-        # if the contact is ending, delete actions
-        if  k in self.actions and not begin:
-            del self.actions[k]
-        
-        obj = fix.body.userData
-        
-        # Stupid workaround for nasty pybox2d bug:
-        # Getting the user data of a fixture that is currently
-        # begin deleted results in the process crashing without
-        # any error due to heap corruption
-        if not begin and getattr(obj, "destroyingFixture", False):
-            return
-        
-        fixU = fix.userData
-        
-        if fixU is None:
-            return
-        
-        
-        actions =  []
-        #actions.extend(fixU.get("begin-contact", []) if begin else [])
-        actions.extend(fixU.get("touching", []) if begin else [])
-        actions.extend(fixU.get("end-contact", []) if not begin else [])
-        
-        for action in actions:
+    
+    def createAction(self, contact, action, k, fix, fixA, fixB, fixU, fixAu, fixBu, obj, objA, objB, player):
+        if player is not None:
             if action["action"] == "door-close":
                 func = lambda: obj.close() if self.checkRequirements(player, action.get("requirements", None)) else None
                 delay = action.get("delay", 0)
@@ -168,27 +131,85 @@ class LevelBase(b2ContactListener):
                     player.fuel = min(100, player.fuel + amount)
                     action["capacity"] = action["capacity"] - amount
                 now = Clock.sysTime()
-                self.actions[(player, fix)] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
+                self.actions[k] = lambda dt: refill(player, fixU, dt) if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
             elif action["action"] == "door-open":
                 now = Clock.sysTime()
-                self.actions[(player, fix)] = lambda dt: obj.open() if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
-            elif action["action"] == "pick-up":
+                self.actions[k] = lambda dt: obj.open() if Clock.sysTime() - now > action["delay"] and self.checkRequirements(player, action.get("requirements", None)) else None
+            elif action["action"] == "pick-up" and player is not None:
                 if self.checkRequirements(player, action.get("requirements", None)):
                     player.possessions.append(action["name"])
                     contact.enabled = False
-                    self.actions[(player, fix)] = lambda dt: self.destroyObject(obj)
+                    self.actions[k] = lambda dt: self.destroyObject(obj)
             elif action["action"] == "apply-force":
                 def apply_force(player, force, point):
                     f = player.body.GetWorldVector(localVector=force)
                     p = player.body.GetWorldPoint(localPoint=point)
                     player.body.ApplyForce(force, p, True)
-                self.actions[(player, fix)] = lambda dt: apply_force(player, action["force"], (0, 0))
+                self.actions[k] = lambda dt: apply_force(player, action["force"], (0, 0))
             elif action["action"] == "win":
                 pass
-            elif action["action"] == "destroy":
-                if self.checkRequirements(player, action.get("requirements", None)):
-                    #contact.enabled = False
-                    self.actions[(player, fix)] = lambda dt: self.destroyObject(obj)
+            
+        if action["action"] == "destroy":
+            if self.checkRequirements(player, action.get("requirements", None)):
+                #contact.enabled = False
+                self.actions[k] = lambda dt: self.destroyObject(objA)
+
+    def processContact(self, contact, begin):
+        fixA = contact.fixtureA
+        fixB = contact.fixtureB
+  
+        k = (fixA, fixB)
+        
+        # if the contact is ending, delete actions
+        if  k in self.actions and not begin:
+            del self.actions[k]
+            
+        if  (fixB, fixA) in self.actions and not begin:
+            del self.actions[k]
+            
+            
+        fix = None
+        player = None
+        if self.player is not None:
+            if fixA.body == self.player.body:
+                player = fixA.body.userData
+                fix = fixB
+            elif fixB.body == self.player.body:
+                player = fixB.body.userData
+                fix = fixA
+        
+        objA = fixA.body.userData
+        objB = fixB.body.userData
+        obj = fix.body.userData if fix else None
+        
+        # Stupid workaround for nasty pybox2d bug:
+        # Getting the user data of a fixture that is currently
+        # begin deleted results in the process crashing without
+        # any error due to heap corruption
+        if not begin and (getattr(objA, "destroyingFixture", False) or getattr(objB, "destroyingFixture", False)):
+            return
+        
+        fixAu = fixA.userData
+        fixBu = fixB.userData
+        fixU = fix.userData if fix else None
+        
+        if fixAu is None and fixBu is None:
+            return
+        
+        actionsA = []
+        actionsB = []
+        #actions.extend(fixU.get("begin-contact", []) if begin else [])
+        actionsA.extend(fixAu.get("touching", []) if begin and fixAu is not None and type(fixAu) == dict else [])
+        actionsB.extend(fixBu.get("touching", []) if begin and fixBu is not None and type(fixBu) == dict else [])
+        actionsA.extend(fixAu.get("end-contact", []) if not begin and fixAu is not None and type(fixAu) == dict else [])
+        actionsB.extend(fixBu.get("end-contact", []) if not begin and fixBu is not None and type(fixBu) == dict else [])
+        
+        
+        for action in actionsA:
+            self.createAction(contact, action, k, fix, fixA, fixB, fixU, fixAu, fixBu, obj, objA, objB, player)
+
+        for action in actionsB:
+            self.createAction(contact, action, k, fix, fixB, fixA, fixU, fixBu, fixAu, obj, objB, objA, player)
             
     def PreSolve(self, contact, old_manifold):
         pass
